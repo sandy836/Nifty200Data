@@ -1,1 +1,1 @@
-web gunicorn app:app --log-level 'critical'
+web gunicorn app:app --timeout 60
