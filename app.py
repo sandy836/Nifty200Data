@@ -103,6 +103,7 @@ def insertData():
                 .set(dataList)
             LOG.info("Information pushed to Db")
             LOG.info(res)
+            LOG.info("Stock number {} having symbol as {} pushed properly".format(index, stockSymbol))
     return "Successfully pushed to Firebase for the data "+DATE
 
 if __name__ == '__main__':
