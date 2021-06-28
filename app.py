@@ -21,14 +21,15 @@ CONFIG_URL = os.path.join(SITE_ROOT, 'static/auth', 'config.json')
 SYMBOLS = os.path.join(SITE_ROOT, 'static/dataSchema', 'ind_nifty200list.csv')
 PRICE_PATH = os.path.join(SITE_ROOT, "static/dataSchema", "price.json")
 PRICEDETAILS_SCHEMA = os.path.join(SITE_ROOT, "static/dataSchema", "priceDetails.json")
+
+
 #Initialize Flask app
+firebaseConfig = json.load(open(CONFIG_URL))
+LOG.info('Initialize App')
+cred = credentials.Certificate(firebaseConfig)
+firebase_admin.initialize_app(cred)
 app = Flask(__name__)
 
-def initailizeApp():
-    firebaseConfig = json.load(open(CONFIG_URL))
-    LOG.info('Initialize App')
-    cred = credentials.Certificate(firebaseConfig)
-    firebase_admin.initialize_app(cred)
 
 def DbConnect():
     LOG.info('Initailized DB client')
@@ -110,5 +111,4 @@ def insertData():
     return "Successfully pushed to Firebase for the data "+DATE
 
 if __name__ == '__main__':
-    initailizeApp()
     app.run(debug = True) 
