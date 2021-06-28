@@ -28,13 +28,9 @@ firebaseConfig = json.load(open(CONFIG_URL))
 LOG.info('Initialize App')
 cred = credentials.Certificate(firebaseConfig)
 firebase_admin.initialize_app(cred)
+LOG.info('Initailized DB client')
+dbObject = firestore.client()
 app = Flask(__name__)
-
-
-def DbConnect():
-    LOG.info('Initailized DB client')
-    dbObject = firestore.client()
-    return dbObject
 
 def apiRequest(symbol, requestId):
     url = 'https://groww.in/v1/api/charting_service/v2/chart/exchange/NSE/segment/CASH/{}/daily?intervalInMinutes=1'.format(symbol)
@@ -91,7 +87,6 @@ def covertToSchema(data, stockName, stockSymbol):
 @app.route('/', methods = ['GET'])
 def insertData():
     DATE = None
-    dbObject = DbConnect()
     df_symbols = pd.read_csv(SYMBOLS)
     for index, row in df_symbols.iterrows():
         stockSymbol = row["Symbol"]
