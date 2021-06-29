@@ -32,8 +32,8 @@ LOG.info('Initailized DB client')
 dbObject = firestore.client()
 app = Flask(__name__)
 
-def apiRequest(symbol, requestId):
-    url = 'https://groww.in/v1/api/charting_service/v2/chart/exchange/NSE/segment/CASH/{}/daily?intervalInMinutes=1'.format(symbol)
+def apiRequest(symbol, requestId, candle_size):
+    url = 'https://groww.in/v1/api/charting_service/v2/chart/exchange/NSE/segment/CASH/{}/daily?intervalInMinutes={}'.format(symbol, candle_size)
     headers = CaseInsensitiveDict()
     headers['authority'] = 'groww.in'
     headers['pragma'] = 'no-cache'
@@ -43,7 +43,7 @@ def apiRequest(symbol, requestId):
     headers['sec-ch-ua-mobile'] = '?0'
     headers['authorization'] = 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ7XCJlbWFpbElkXCI6XCJzYW5kZWVwc2hyaXZhc3RhdmE1MThAZ21haWwuY29tXCIsXCJ1c2VyQWNjb3VudElkXCI6XCJBQ0M0MDY1OTI4ODg3NzM2XCIsXCJwbGF0Zm9ybVwiOlwid2ViXCIsXCJwbGF0Zm9ybVZlcnNpb25cIjpudWxsLFwib3NcIjpudWxsLFwib3NWZXJzaW9uXCI6bnVsbCxcImlwQWRkcmVzc1wiOlwiMjAwMTo0MjA6YzBlMDoxMDA2Ojo3MTMsXCIsXCJtYWNBZGRyZXNzXCI6bnVsbCxcInVzZXJBZ2VudFwiOlwiTW96aWxsYS81LjAgKE1hY2ludG9zaDsgSW50ZWwgTWFjIE9TIFggMTBfMTVfNykgQXBwbGVXZWJLaXQvNTM3LjM2IChLSFRNTCwgbGlrZSBHZWNrbykgQ2hyb21lLzkxLjAuNDQ3Mi4xMTQgU2FmYXJpLzUzNy4zNlwiLFwiZ3Jvd3dVc2VyQWdlbnRcIjpudWxsLFwiZGV2aWNlSWRcIjpudWxsLFwic2Vzc2lvbklkXCI6XCJlYWUwNmQ0NC0zN2MxLTQ4MDEtOTY0Zi1jMTY3ZWMyYjBlNjRcIixcInN1cGVyQWNjb3VudElkXCI6XCJBQ0M0MDY1OTI4ODg3NzM2XCJ9IiwibmJmIjoxNjI0NjM2ODA1LCJpc3MiOiJncm93d2JpbGxpb25taWxsZW5uaWFsIiwiZXhwIjoxNjI3MjI4ODU1LCJpYXQiOjE2MjQ2MzY4NTV9.MAqmvvfcTnwdHmdqFOMbm8sl9rqPuTTn_1BZ8dukNKByHK2C278lAhewZW7y46tyl4dGnruJzQS6HXdW9jL8rg'
     headers['accept'] = 'application/json, text/plain, */*'
-    headers['x-request-checksum'] = 'N3JyOWttIyMjc2ZyRVFjK3laWFVQMlgvTEpNdnN6ZENkbkw4Nk12NTJSUFdNS2VoNlljaUVxUXJuYmpYNmJnNUhwQlpUN1dCYWJIc0xIcW4yMkc3bjNEem1NeEtXQ01GMXNGNUZ4SHJGcWRSM0JmSnorc289'
+    headers['x-request-checksum'] = 'cnd3bGRwIyMjSHYwZWZmMFZhZXNFdDVLTEorWEt0eUdvcnVkZkdYYmZFOERxcW9pSHRiY2FvWHByY1lJU3hHc0xOZXlOVEVIZEJtUEdiVjh5c3hQSDZPM01sT0R3VDJZci93eEVVYitNODRuejUwRDU3UFk9'
     headers['user-agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36'
     headers['x-platform'] = 'web'
     headers['x-user-campaign'] = 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ7XCJjcmVhdGVkQXRcIjpcIjIwMjEtMDYtMjhUMTQ6MzU6MjIuNjM2KzAwMDBcIixcInVzZXJBY2NvdW50SWRcIjpcIkFDQzQwNjU5Mjg4ODc3MzZcIixcImlzU3VjY2Vzc1wiOnRydWUsXCJzZXNzaW9uSWRcIjpcImUwMDgxNDE2LTQ4OWQtNDEyMy05ZjZjLTQyM2Q5Yzc0ZmZiYVwiLFwiaXBBZGRyZXNzXCI6XCIyMDAxOjQyMDpjMGUwOjEwMDY6Ojc5NixcIixcImRldmljZUlkXCI6bnVsbCxcInN1cGVyQWNjb3VudElkXCI6XCJBQ0M0MDY1OTI4ODg3NzM2XCJ9IiwibmJmIjoxNjI0ODkwODcyLCJpc3MiOiJncm93d2JpbGxpb25taWxsZW5uaWFsIiwiZXhwIjoxNjI3NDgyOTIyLCJpYXQiOjE2MjQ4OTA5MjJ9.ww1G6ioA6Vv0UDyyPRSq84L7rlzHo1HwReXD3UOh5Pk8OUcfq-W5qpW2bPY5FoS64bN5F9GgWT88lG-avElslA'
@@ -87,23 +87,25 @@ def covertToSchema(data, stockName, stockSymbol):
 @app.route('/', methods = ['GET'])
 def insertData():
     DATE = None
+    candle_size_list = [5, 10, 15]
     df_symbols = pd.read_csv(SYMBOLS)
     for index, row in df_symbols.iterrows():
-        stockSymbol = row["Symbol"]
-        stockName = row["Company Name"]
-        requestId = getRequestId()
-        response = apiRequest(stockSymbol, requestId)
-        if response:
-            dataList = covertToSchema(response["candles"], stockName, stockSymbol)
-            DATE = dataList["date"]
-            uniqueId = DATE+"_"+stockSymbol
-            LOG.info("Push Data")
-            res = dbObject.collection('Nifty_200_Data').document(stockSymbol)\
-                .collection("CandleStick").document(uniqueId)\
-                .set(dataList)
-            LOG.info("Information pushed to Db")
-            LOG.info(res)
-            LOG.info("Stock number {} having symbol as {} pushed properly".format(index, stockSymbol))
+        for candle_size in candle_size_list:
+            stockSymbol = row["Symbol"]
+            stockName = row["Company Name"]
+            requestId = getRequestId()
+            response = apiRequest(stockSymbol, requestId, candle_size)
+            if response:
+                dataList = covertToSchema(response["candles"], stockName, stockSymbol)
+                DATE = dataList["date"]
+                uniqueId = DATE+"_"+stockSymbol
+                LOG.info("Push Data")
+                res = dbObject.collection('Nifty_200_Data').document(stockSymbol)\
+                    .collection("CandleStick_"+str(candle_size)).document(uniqueId)\
+                    .set(dataList)
+                LOG.info("Information pushed to Db")
+                LOG.info(res)
+                LOG.info("Stock number {} having symbol as {} and candle size {} pushed properly".format(index, stockSymbol, candle_size))
     return "Successfully pushed to Firebase for the data "+DATE
 
 if __name__ == '__main__':
