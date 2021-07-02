@@ -11,20 +11,28 @@ import string
 import json
 import random
 from datetime import datetime
+import pymongo
 
 LOG_FORMAT = '%(asctime)s %(levelname)s : %(message)s'
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 LOG = logging.getLogger(__name__)
 SIZE = 32
+DATE = None
 SITE_ROOT = os.path.realpath(os.path.dirname(__file__))
-CONFIG_URL = os.path.join(SITE_ROOT, 'static/auth', 'config.json')
+FIREBASE_CONFIG_PATH = os.path.join(SITE_ROOT, 'static/auth', 'FireBaseConfig.json')
+MONGO_CONFIG_PATH = os.path.join(SITE_ROOT, 'static/auth', 'MongoConfig.json')
 SYMBOLS = os.path.join(SITE_ROOT, 'static/dataSchema', 'ind_nifty200list.csv')
 PRICE_PATH = os.path.join(SITE_ROOT, "static/dataSchema", "price.json")
 PRICEDETAILS_SCHEMA = os.path.join(SITE_ROOT, "static/dataSchema", "priceDetails.json")
+MONGO_CONNECTION_DETAILS = json.load(open(MONGO_CONFIG_PATH))
+MONGO_CONN_OBJ_REMOTE = pymongo.MongoClient(MONGO_CONNECTION_DETAILS["connectionStringRemote"])
+MONGO_DB_OBJ_REMOTE = MONGO_CONN_OBJ_REMOTE.Nifty_200_Data
+MONGO_CONN_OBJ_LOCAL = pymongo.MongoClient(MONGO_CONNECTION_DETAILS["connectionStringLocal"])
+MONGO_DB_OBJ_LOCAL = MONGO_CONN_OBJ_LOCAL.Nifty_200_Data
 
 
 #Initialize Flask app
-firebaseConfig = json.load(open(CONFIG_URL))
+firebaseConfig = json.load(open(FIREBASE_CONFIG_PATH))
 LOG.info('Initialize App')
 cred = credentials.Certificate(firebaseConfig)
 firebase_admin.initialize_app(cred)
@@ -35,28 +43,29 @@ app = Flask(__name__)
 def apiRequest(symbol, requestId, candle_size):
     url = 'https://groww.in/v1/api/charting_service/v2/chart/exchange/NSE/segment/CASH/{}/daily?intervalInMinutes={}'.format(symbol, candle_size)
     headers = CaseInsensitiveDict()
-    headers['authority'] = 'groww.in'
-    headers['pragma'] = 'no-cache'
-    headers['cache-control'] = 'no-cache'
-    headers['sec-ch-ua'] = '" Not;A Brand";v="99", "Google Chrome";v="91", "Chromium";v="91"'
-    headers['x-app-id'] = 'growwWeb'
-    headers['sec-ch-ua-mobile'] = '?0'
-    headers['authorization'] = 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ7XCJlbWFpbElkXCI6XCJzYW5kZWVwc2hyaXZhc3RhdmE1MThAZ21haWwuY29tXCIsXCJ1c2VyQWNjb3VudElkXCI6XCJBQ0M0MDY1OTI4ODg3NzM2XCIsXCJwbGF0Zm9ybVwiOlwid2ViXCIsXCJwbGF0Zm9ybVZlcnNpb25cIjpudWxsLFwib3NcIjpudWxsLFwib3NWZXJzaW9uXCI6bnVsbCxcImlwQWRkcmVzc1wiOlwiMjAwMTo0MjA6YzBlMDoxMDA2Ojo3MTMsXCIsXCJtYWNBZGRyZXNzXCI6bnVsbCxcInVzZXJBZ2VudFwiOlwiTW96aWxsYS81LjAgKE1hY2ludG9zaDsgSW50ZWwgTWFjIE9TIFggMTBfMTVfNykgQXBwbGVXZWJLaXQvNTM3LjM2IChLSFRNTCwgbGlrZSBHZWNrbykgQ2hyb21lLzkxLjAuNDQ3Mi4xMTQgU2FmYXJpLzUzNy4zNlwiLFwiZ3Jvd3dVc2VyQWdlbnRcIjpudWxsLFwiZGV2aWNlSWRcIjpudWxsLFwic2Vzc2lvbklkXCI6XCJlYWUwNmQ0NC0zN2MxLTQ4MDEtOTY0Zi1jMTY3ZWMyYjBlNjRcIixcInN1cGVyQWNjb3VudElkXCI6XCJBQ0M0MDY1OTI4ODg3NzM2XCJ9IiwibmJmIjoxNjI0NjM2ODA1LCJpc3MiOiJncm93d2JpbGxpb25taWxsZW5uaWFsIiwiZXhwIjoxNjI3MjI4ODU1LCJpYXQiOjE2MjQ2MzY4NTV9.MAqmvvfcTnwdHmdqFOMbm8sl9rqPuTTn_1BZ8dukNKByHK2C278lAhewZW7y46tyl4dGnruJzQS6HXdW9jL8rg'
-    headers['accept'] = 'application/json, text/plain, */*'
-    headers['x-request-checksum'] = "bmFkb2NmIyMjZXhCYUxreTlZcVVBQk5mbUJNTWtWeURaUk1xQkk4eUlpMkJvcElBRVp4RFNrN1c2VWcxL0oxeCtWNXdHU1FVV3VKZUtQLytGdktyMzlOUkU5UzNpb2M3enhIc3Jxd0d2K01TZmE2K1BDVGc9"
-    headers['user-agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36'
-    headers['x-platform'] = 'web'
-    headers['x-user-campaign'] = 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ7XCJjcmVhdGVkQXRcIjpcIjIwMjEtMDYtMjhUMTQ6MzU6MjIuNjM2KzAwMDBcIixcInVzZXJBY2NvdW50SWRcIjpcIkFDQzQwNjU5Mjg4ODc3MzZcIixcImlzU3VjY2Vzc1wiOnRydWUsXCJzZXNzaW9uSWRcIjpcImUwMDgxNDE2LTQ4OWQtNDEyMy05ZjZjLTQyM2Q5Yzc0ZmZiYVwiLFwiaXBBZGRyZXNzXCI6XCIyMDAxOjQyMDpjMGUwOjEwMDY6Ojc5NixcIixcImRldmljZUlkXCI6bnVsbCxcInN1cGVyQWNjb3VudElkXCI6XCJBQ0M0MDY1OTI4ODg3NzM2XCJ9IiwibmJmIjoxNjI0ODkwODcyLCJpc3MiOiJncm93d2JpbGxpb25taWxsZW5uaWFsIiwiZXhwIjoxNjI3NDgyOTIyLCJpYXQiOjE2MjQ4OTA5MjJ9.ww1G6ioA6Vv0UDyyPRSq84L7rlzHo1HwReXD3UOh5Pk8OUcfq-W5qpW2bPY5FoS64bN5F9GgWT88lG-avElslA'
-    headers['x-request-id'] = requestId
-    headers['sec-fetch-site'] = 'same-origin'
-    headers['sec-fetch-mode'] = 'cors'
-    headers['sec-fetch-dest'] = 'empty'
-    headers['accept-language'] = 'en-GB,en-US;q=0.9,en;q=0.8'
-    headers['cookie'] = 'bfdskfds=light; _gcl_au=1.1.1191727926.1624526435; _ga=GA1.2.124283876.1624526435; G_ENABLED_IDPS=google; G_AUTHUSER_H=0; lhtndhgfd=U2FsdGVkX19TAdVZvcth4kE4ThNh4VyaGeIWKwuIXYFjy76K4s3AsE/XjWavRv9uUtaf6+8CXxz796TzhN7Y6fPch2W7yOl+2//xw7wnOWCm2IyH79wE7vcYj2jb4S87HCNH910Y9J9tjCZw5FlG5A7VgujOPyTczpA2zOZp7sR67excWU+TrdXD9eNw4/pLs9VfmPYPr6J/PT8YUZf/d+mFRQk+k0lKp1JBjA1SGT3GIZzxkiBtKqfYVl/eZK+AhaR9ABfFVS6WNwdqpCHZPDyWs40UMuckwrswBy2/Gj7QFvZWo9VQ2Dfmk84tY/XuXA1kDHrbTCsIHUK8tX6XOdCJ7U3k8IqPtOWTwA+uy7aXNqa6plSMJqP7hIv/O/MqKSrzDc9OfsqOtQWgmsj4qmAzbk4BGLi0tv1WZna5xda/PPyG50A/+UQva9zDDdhsQqZkOo+OLhZhU1VB+nRLUPulbOJ4xy5k5fRpwFjqjWC6x4WsL6Fz+Etyop/YlEkcymZ0v1Jk6lunQbKTUQ3Hzxi5BaCvPhisqCrDNP+cPIc7sQWTgl1k0eBxgsRL6D21VjLb3Rtt1eixBv/YQAVCRA91z1ETj1zOjStpDlBeyXAZ0E1eDhJZj90Z7nUNGO5iwaxjzVcwTYjhpcrMTAdG1/P+Tlcm6Q+NNNHBJD/SBgxYPiWbCErT1nbT9wI6yEbT0lqoEfsko4KS75G8HlsrjOSYRfNzF70/wKHjMeO9RwDTryavy/LqIPjXhKCDyLQXo6q4PMG8Z+0E3zkflA+HwZPPbCv5FRXGebKYBfDn2V1+oWw5kqoxHIbbFxsVEf3lHHGXTzewLziFGVGunW7uO75RyMBKugXqAnPYyViiPEiHxAqs8aqetHe2P91F3W6JFJoTrkG56eFC0JAwWdXnhwUnV5HBux29aLOL+PnXA/ggNEsWcXIvfl4dF2ODv7stCpLgsLSN7RceU75gP5MAmlcgPF3YkMP+GEmV2dddwt+9OrJ2kpSYEOEyXvTws66GnV8zgfKy5s2e2s/CiKCbUApH1ZDbZ4SEcU35qgLk9rNoO8YQX11+qvtWFlL7ZI3Ol6PZ130LHX50t9aBZ/50uCQKP1xe5ymVVfjYbeddOJS7+CXbfVfNZszwf4TLBg6B2jdeqMpW0N4791iUGx8TmnAAFcUy8I3QKzzFi3GSTsjCeVRMTQ4WsL7dlwnQfBHYlokm2gGna9iEgaj1LvgjpdUpw4kdDEBDS1W021rk4qoJUxwjByB5W9P5qDQ3HkNb; g_state={"i_p":1624644062185,"i_l":1}; _gid=GA1.2.1035530354.1624743829; __cfruid=45f2f108c704a41a3a8d80ac8c074f78a865b9c2-1624890918; arkeyt473rfh7834cd=U2FsdGVkX1/LwnyCWvIAxI+k3kwHDR93cKRkOaj0XO86et+FCVJDc+7HTEuUCB6wFLM43UrCoSEfOZkb7mxyPrPCdavwDkprPfyinPNjf8fnNXFagAGHNf6MXxRqX9Qdh78+7YioSL5Rcp9URSDN7OOsfhYk+e2lYzlqX86HG7G3bjC31qszRVOO4eRavcNmPjkVjmmrZ4jruWdjsxaPGcmhfgbIpwDPuDB7BJEMj7qq8SOA9vX9/gNSuJwC8IXk0z1D/0uhjis7XvFjF3Vo5V0xixgKB4In7PrczWNL3N/rcUKnQA9IiooTe3CRcIPdK0XQWBdb/++0g872A8J6FuwPQxgmhyF7OOMcQ9EZty1Cs07NZ+lkPk9dj0VTGz5Q0/1BzMtgAbDRPz4+u+glTp5Ah6KXm2r/wEFK3z1hVDNPJjyOyV61fnkTbRfxLvgpaVG6gXdShfzDyZTiQNZBpeOtLv8qpQeEd65xImWPE0JtJkU1aWhHzsEdM+MRofZrLsIMgMSsfLkvsjBoOR6rAPewE4t6gcoMbDf4+9YGNy+BmhzS+YCBREmcPRNISwWCN2N2FSUlqYRb20nF+BgnPQzMAkT7z5W69FZ7JTxjEufJG03QHv+lY0gILFYM/5g5G4D03NdoslV8fvCEEqQAFMLgLnnHSwaRrTMIaMTCO31pQCV+EY732OVWydEi7i0oxz95tAN8x+202D7ff/pxf7EO7lYqiGe3TjuL27cVhYH+JhNW6hjDn+zmgplQ8HTs07zA6M1rHXCWVHNos/npMpQ/6+OJ4vw+9s5ZS21JLtO4JNLtXyLq1vvHi6Z1nSgO; AUTH_SESSION_ID=U2FsdGVkX1/UOMV1Y+3W6svhnO8Nz2V3eSIp8K6sEzQJamd45lL+RNxmDFKzyEiR990X4OfytKQRbaMFBQHGiw==; _gat_UA-76725130-1=1'
-
+    headers["authority"] = "groww.in"
+    headers["pragma"] = "no-cache"
+    headers["cache-control"] = "no-cache"
+    headers["sec-ch-ua"] = '" Not;A Brand";v="99", "Google Chrome";v="91", "Chromium";v="91"'
+    headers["x-app-id"] = "growwWeb"
+    headers["sec-ch-ua-mobile"] = "?0"
+    headers["authorization"] = "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ7XCJlbWFpbElkXCI6XCJzYW5kZWVwc2hyaXZhc3RhdmE1MThAZ21haWwuY29tXCIsXCJ1c2VyQWNjb3VudElkXCI6XCJBQ0M0MDY1OTI4ODg3NzM2XCIsXCJwbGF0Zm9ybVwiOlwid2ViXCIsXCJwbGF0Zm9ybVZlcnNpb25cIjpudWxsLFwib3NcIjpudWxsLFwib3NWZXJzaW9uXCI6bnVsbCxcImlwQWRkcmVzc1wiOlwiMjAwMTo0MjA6YzBlMDoxMDAxOjoxMixcIixcIm1hY0FkZHJlc3NcIjpudWxsLFwidXNlckFnZW50XCI6XCJNb3ppbGxhLzUuMCAoTWFjaW50b3NoOyBJbnRlbCBNYWMgT1MgWCAxMF8xNV83KSBBcHBsZVdlYktpdC81MzcuMzYgKEtIVE1MLCBsaWtlIEdlY2tvKSBDaHJvbWUvOTEuMC40NDcyLjExNCBTYWZhcmkvNTM3LjM2XCIsXCJncm93d1VzZXJBZ2VudFwiOm51bGwsXCJkZXZpY2VJZFwiOm51bGwsXCJzZXNzaW9uSWRcIjpcImZiY2Y1OTFmLTllM2MtNDE4Zi05MDYzLTMyY2I0YzgwODZiM1wiLFwic3VwZXJBY2NvdW50SWRcIjpcIkFDQzQwNjU5Mjg4ODc3MzZcIn0iLCJuYmYiOjE2MjUxMTkzMTUsImlzcyI6Imdyb3d3YmlsbGlvbm1pbGxlbm5pYWwiLCJleHAiOjE2Mjc3MTEzNjUsImlhdCI6MTYyNTExOTM2NX0.uqRijINNiW4QbtGUgx0lRkSlv8U0hgYgdMsL0qhYQ8p4hTmgPjZeOQ9iZqXDvaAqEOafLuWD0y0vFcvY61C1EA"
+    headers["accept"] = "application/json, text/plain, */*"
+    headers["x-request-checksum"] = "ZmVjd2FxIyMjZFV6Yy8vSUN6REdWT3VjbHpPOUR6RTl5QUJOcm01MkR2aktGTFNNUE9LLzN3K0RFS0pnQkg4VnplNFB1ZGJDc1ZYMUpUQ2swU3QrWExudGR2KzM1dEZTOUFQeUlOTm5VaHArMXMxWGN6Wjg9"
+    headers["user-agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36"
+    headers["x-platform"] = "web"
+    headers["x-user-campaign"] = "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ7XCJjcmVhdGVkQXRcIjpcIjIwMjEtMDctMDFUMDY6MDI6NTEuNDg2KzAwMDBcIixcInVzZXJBY2NvdW50SWRcIjpcIkFDQzQwNjU5Mjg4ODc3MzZcIixcImlzU3VjY2Vzc1wiOnRydWUsXCJzZXNzaW9uSWRcIjpcIjhiZGQzZGQ1LWU4N2ItNDY2Mi1iODhkLWNlNTEwZjA5MzNkOVwiLFwiaXBBZGRyZXNzXCI6XCIyMDAxOjQyMDpjMGUwOjEwMDE6OjEyLFwiLFwiZGV2aWNlSWRcIjpudWxsLFwic3VwZXJBY2NvdW50SWRcIjpcIkFDQzQwNjU5Mjg4ODc3MzZcIn0iLCJuYmYiOjE2MjUxMTkzMjEsImlzcyI6Imdyb3d3YmlsbGlvbm1pbGxlbm5pYWwiLCJleHAiOjE2Mjc3MTEzNzEsImlhdCI6MTYyNTExOTM3MX0.KIbRCq03eOX1IYzT97RmU0YPr-NfrMKQuNscjB22odqNiAGjwDMlYWC-Sq6ntA8J16T3Ef6okXKxQrV_nHAfjA"
+    headers["x-request-id"] = requestId
+    headers["sec-fetch-site"] = "same-origin"
+    headers["sec-fetch-mode"] = "cors"
+    headers["sec-fetch-dest"] = "empty"
+    headers["referer"] = "https://groww.in/stocks/indraprastha-gas-ltd"
+    headers["accept-language"] = "en-GB,en-US;q=0.9,en;q=0.8"
+    headers["cookie"] = 'bfdskfds=light; _gcl_au=1.1.1191727926.1624526435; _ga=GA1.2.124283876.1624526435; G_ENABLED_IDPS=google; G_AUTHUSER_H=0; lhtndhgfd=U2FsdGVkX19TAdVZvcth4kE4ThNh4VyaGeIWKwuIXYFjy76K4s3AsE/XjWavRv9uUtaf6+8CXxz796TzhN7Y6fPch2W7yOl+2//xw7wnOWCm2IyH79wE7vcYj2jb4S87HCNH910Y9J9tjCZw5FlG5A7VgujOPyTczpA2zOZp7sR67excWU+TrdXD9eNw4/pLs9VfmPYPr6J/PT8YUZf/d+mFRQk+k0lKp1JBjA1SGT3GIZzxkiBtKqfYVl/eZK+AhaR9ABfFVS6WNwdqpCHZPDyWs40UMuckwrswBy2/Gj7QFvZWo9VQ2Dfmk84tY/XuXA1kDHrbTCsIHUK8tX6XOdCJ7U3k8IqPtOWTwA+uy7aXNqa6plSMJqP7hIv/O/MqKSrzDc9OfsqOtQWgmsj4qmAzbk4BGLi0tv1WZna5xda/PPyG50A/+UQva9zDDdhsQqZkOo+OLhZhU1VB+nRLUPulbOJ4xy5k5fRpwFjqjWC6x4WsL6Fz+Etyop/YlEkcymZ0v1Jk6lunQbKTUQ3Hzxi5BaCvPhisqCrDNP+cPIc7sQWTgl1k0eBxgsRL6D21VjLb3Rtt1eixBv/YQAVCRA91z1ETj1zOjStpDlBeyXAZ0E1eDhJZj90Z7nUNGO5iwaxjzVcwTYjhpcrMTAdG1/P+Tlcm6Q+NNNHBJD/SBgxYPiWbCErT1nbT9wI6yEbT0lqoEfsko4KS75G8HlsrjOSYRfNzF70/wKHjMeO9RwDTryavy/LqIPjXhKCDyLQXo6q4PMG8Z+0E3zkflA+HwZPPbCv5FRXGebKYBfDn2V1+oWw5kqoxHIbbFxsVEf3lHHGXTzewLziFGVGunW7uO75RyMBKugXqAnPYyViiPEiHxAqs8aqetHe2P91F3W6JFJoTrkG56eFC0JAwWdXnhwUnV5HBux29aLOL+PnXA/ggNEsWcXIvfl4dF2ODv7stCpLgsLSN7RceU75gP5MAmlcgPF3YkMP+GEmV2dddwt+9OrJ2kpSYEOEyXvTws66GnV8zgfKy5s2e2s/CiKCbUApH1ZDbZ4SEcU35qgLk9rNoO8YQX11+qvtWFlL7ZI3Ol6PZ130LHX50t9aBZ/50uCQKP1xe5ymVVfjYbeddOJS7+CXbfVfNZszwf4TLBg6B2jdeqMpW0N4791iUGx8TmnAAFcUy8I3QKzzFi3GSTsjCeVRMTQ4WsL7dlwnQfBHYlokm2gGna9iEgaj1LvgjpdUpw4kdDEBDS1W021rk4qoJUxwjByB5W9P5qDQ3HkNb; g_state={"i_p":1624644062185,"i_l":1}; _gid=GA1.2.1035530354.1624743829; __cfruid=45f2f108c704a41a3a8d80ac8c074f78a865b9c2-1624890918; _gat_UA-76725130-1=1; arkeyt473rfh7834cd=U2FsdGVkX1/LCr26nP+lO9NHIDkbFhmt4gnLYeEuVIGOyHsxzzOXdhfZ4GAebFb5mZQeeArFOtHvZC/994SCQu6tiMJUkYSTcsd1qd/tiv1uUCAz4tJDI+FancyqF0oxGkxmdn64/mCTFU1aKVnxoQcxANrPNuJ5sKtdNTER2MCsykNlDlvYZdz/MY1YSOGHJ3X0eV+/t9B7Z+b9GUQZiHwCnK8LW4/ZUxa9uv1XGkXRNx4zbOwtaE4B7OIdSFMyFh3+wTK18Vu2a3D1oyuLSQaFrla5E01LSQ1/iLK6iwqpyHVJmyOnKom/4uhNmFZgBc0buiFaw6gvq2dphzJiI03h+ZinDBqyvHK+mLjnTMUSjYAhQaeQxm15qgxg0W7tKuH8ItrCXcWaHOJNnXxAYqf0ziKxT/SBEAV2GzoWY4w5yrtKViy7uIXSZezUhMAQ3tvq3+uOVZdLUEFAqvfJh5H9ss6GelesVscP3iNRPne8vkYXY41SUvMvNaW0yGNqZ80sH8QojWx0p3pBhMUkCrytnw7+D93p81vQBIOkBt//9xQxKhUG+Eqr1rC9dmG4tvyz3tViEWHZqXuY1hHuwyBRcB5l1mkhkiW8ZVOKdP9TMOGJY6KW9xAQgqUZBZW7Sn07ZKwmxFinC9pUP0+j2mgD6RiX8AnqgDZ/yb9ltYJve001FXHT3hx1zrJnnCwLMLF1xIM5VgGtoWUm8A1df/F7FUIYnU+gaqpaBZOPu0he/EdmBb6V/WIDapdS31hymwuoTI/oKBZEZbvS6eACepuNRjO+h92KFkl9/Ghu6+sSA3QNCiOW8kJIqa1MJsVP; AUTH_SESSION_ID=U2FsdGVkX19amRr2Qcz/FDte9SxVmG2k/9IZG6aUXUWo5On6Qew+5fz+o54YTdp1UBz/gBm5tFZcKL9L7UidxA=='
     resp = requests.get(url, headers=headers)
     if resp.status_code == 200:
         return json.loads(resp.text)
+    LOG.info("Failed to produce API response with status Code {}".format(resp.status_code))
     return  None
 
 def getRequestId():
@@ -64,7 +73,7 @@ def getRequestId():
     requestId = ''.join(random.choice(chars) for _ in range(SIZE))
     return requestId[0:8]+'-'+requestId[8:12]+'-'+requestId[12:16]+'-'+requestId[16:20]+'-'+requestId[20:]
 
-def covertToSchema(data, stockName, stockSymbol):
+def covertToSchema(data, stockName, stockSymbol, candle_size):
     priceList = []
     priceDetailsSchema = json.load(open(PRICEDETAILS_SCHEMA))
     for price in data:
@@ -78,6 +87,7 @@ def covertToSchema(data, stockName, stockSymbol):
             #if the volumne traded is null
             priceSchema["volumn"] = 0 if not price[5] else price[5]
             priceList.append(priceSchema)
+    priceDetailsSchema["candleType"] = candle_size
     priceDetailsSchema["stockName"] = stockName
     priceDetailsSchema["date"] = datetime.fromtimestamp(priceList[0]["timeStamp"]).strftime('%Y-%m-%d')
     priceDetailsSchema["stockSymbol"] = stockSymbol
@@ -85,8 +95,11 @@ def covertToSchema(data, stockName, stockSymbol):
     return priceDetailsSchema
 
 @app.route('/', methods = ['GET'])
-def insertData():
-    DATE = None
+def home():
+    return "Nifty 200 data havesting Project"
+
+@app.route('/FirebBaseInsert', methods = ['GET'])
+def insertDataFireBase():
     candle_size_list = [1, 5, 10, 15]
     df_symbols = pd.read_csv(SYMBOLS)
     for index, row in df_symbols.iterrows():
@@ -96,7 +109,7 @@ def insertData():
             requestId = getRequestId()
             response = apiRequest(stockSymbol, requestId, candle_size)
             if response:
-                dataList = covertToSchema(response["candles"], stockName, stockSymbol)
+                dataList = covertToSchema(response["candles"], stockName, stockSymbol, candle_size)
                 DATE = dataList["date"]
                 uniqueId = DATE+"_"+stockSymbol
                 LOG.info("Push Data")
@@ -107,6 +120,45 @@ def insertData():
                 LOG.info(res)
                 LOG.info("Stock number {} having symbol as {} and candle size {} pushed properly".format(index, stockSymbol, candle_size))
     return "Successfully pushed to Firebase for the data "+DATE
+
+@app.route('/MongoDbInsert', methods = ['GET'])
+def insertMongoDb():
+    evnName = request.args.get("env")
+    candle_size_list = [1, 5, 10, 15]
+    df_symbols = pd.read_csv(SYMBOLS)
+    for index, row in df_symbols.iterrows():
+        for candle_size in candle_size_list:
+            stockSymbol = row["Symbol"]
+            stockName = row["Company Name"]
+            requestId = getRequestId()
+            response = apiRequest(stockSymbol, requestId, candle_size)
+            if response:
+                dataList = covertToSchema(response["candles"], stockName, stockSymbol, candle_size)
+                DATE = dataList["date"]
+                LOG.info("Push Data")
+                if evnName == "REMOTE":
+                    res = MONGO_DB_OBJ_REMOTE[stockSymbol].update(
+                        {"$and":[{"candleType":candle_size},{"date": DATE}]},
+                        dataList,
+                        upsert=True
+                    )
+                    LOG.info("Information pushed to MongoDb {} env".format(evnName))
+                    LOG.info(res)
+                    LOG.info("Stock number {} having symbol as {} and candle size {} pushed properly".format(index, stockSymbol, candle_size))
+                elif evnName == "LOCAL":
+                    res = MONGO_DB_OBJ_LOCAL[stockSymbol].update(
+                        {"$and":[{"candleType":candle_size},{"date": DATE}]},
+                        dataList,
+                        upsert=True
+                    )
+                    LOG.info("Information pushed to MongoDb {} env".format(evnName))
+                    LOG.info(res)
+                    LOG.info("Stock number {} having symbol as {} and candle size {} pushed properly".format(index, stockSymbol, candle_size))
+                else:
+                    LOG.info("Pass a proper env Name")
+    return "Successfully pushed to MongoDB for the data "+DATE
+
+
 
 if __name__ == '__main__':
     app.run(debug = True) 
