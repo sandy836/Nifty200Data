@@ -11,7 +11,7 @@ import logging
 import string
 import json
 import random
-from datetime import datetime, time
+from datetime import datetime
 import pymongo
 
 LOG_FORMAT = '%(asctime)s %(levelname)s : %(message)s'
