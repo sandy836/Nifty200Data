@@ -1,4 +1,0 @@
-{
-    "connectionStringRemote":"mongodb+srv://Nifty200Data:Nifty200Data@cluster0.j4ldf.mongodb.net/Nifty_200_Data?retryWrites=true&w=majority&ssl=true&ssl_cert_reqs=CERT_NONE",
-    "connectionStringLocal":"mongodb://localhost:27017/?readPreference=primary&appname=MongoDB%20Compass&ssl=false"
-}
