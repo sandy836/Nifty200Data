@@ -4,13 +4,14 @@ from firebase_admin import credentials
 from firebase_admin import firestore 
 import os
 import requests
+import time
 from requests.structures import CaseInsensitiveDict
 import pandas as pd
 import logging
 import string
 import json
 import random
-from datetime import datetime
+from datetime import datetime, time
 import pymongo
 
 LOG_FORMAT = '%(asctime)s %(levelname)s : %(message)s'
@@ -157,6 +158,7 @@ def insertMongoDb():
                     LOG.info("Stock number {} having symbol as {} and candle size {} pushed properly".format(index, stockSymbol, candle_size))
                 else:
                     LOG.info("Pass a proper env Name")
+            time.sleep(2)
     return "Successfully pushed to MongoDB for the data "+DATE
 
 
